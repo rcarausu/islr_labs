@@ -105,3 +105,124 @@ predict(glm.fit,newdata=data.frame(Lag1=c(1.2,1.5),Lag2=c(1.1,-0.8)),type="respo
 
 # LINEAR DISCRIMINANT ANALYSIS (Page 176)
 
+# We perform LDA using the lda() function, part of the MASS libreary
+# Usage is similar to glm() functon, without the family argument
+# We use only the data before 2005
+library(MASS)
+lda.fit=lda(Direction~Lag1+Lag2, data=Smarket, subset=train)
+
+"lda.fit
+Call:
+  lda(Direction ~ Lag1 + Lag2, data = Smarket, subset = train)
+
+Prior probabilities of groups:
+  Down       Up 
+0.491984 0.508016 
+
+Group means:
+  Lag1        Lag2
+Down  0.04279022  0.03389409
+Up   -0.03954635 -0.03132544
+
+Coefficients of linear discriminants:
+  LD1
+Lag1 -0.6420190
+Lag2 -0.5135293
+"
+# The plot() function produces plots of the linear discriminants, obtained for computing -0.642*Lag1-0.514*Lag2 for each of the training
+# observations
+plot(lda.fit)
+
+# The predict function returns a list of3 elements: 
+# First element (class) contains LDA's predictions about the movement of the market
+# Second element (posterior) is a matrix whose kth column contains the posterior probability that the corresponding observation
+# belongs to the klth class
+# Third element (x) contains the linear discriminants
+lda.pred = predict(lda.fit, Smarket.2005)
+names(lda.pred)
+
+lda.class=lda.pred$class
+table(lda.class, Direction.2005)
+mean(lda.class==Direction.2005) # The LDA and logistic regression predictions are almost identical
+
+# Applying a 50% threshold to the posterior probabilities allows us to recreate the predictions contained in lda.pred$class
+sum(lda.pred$posterior[,1]>=.5)
+# 70
+sum(lda.pred$posterior[,1]<.5)
+# 182
+
+# Notice that the posterior probability output bt the model corresponds to the probability that the market will decrease
+lda.pred$posterior[1:20,1]
+lda.class[1:20]
+
+# We can easily change the threshold if we want, for example, to predict a market decrease only if we are very certain that the market
+# will indeed decrease on that day -say, if the posterior probability is at least 90%
+sum(lda.pred$posterior[,1]>.9)
+
+# QUADRATIC DISCRIMINANT ANALYSIS
+library(MASS)
+# We use the qda() function pasrt of the MASS library
+qda.fit = qda(Direction~Lag1+Lag2, data=Smarket, subset=train)
+
+"qda.fit
+Call:
+qda(Direction ~ Lag1 + Lag2, data = Smarket, subset = train)
+
+Prior probabilities of groups:
+    Down       Up 
+0.491984 0.508016 
+
+Group means:
+            Lag1        Lag2
+Down  0.04279022  0.03389409
+Up   -0.03954635 -0.03132544"
+
+qda.class=predict(qda.fit, Smarket.2005)$class
+table(qda.class, Direction.2005)
+mean(qda.class==Direction.2005)
+# 0.60 This is a pretty high value especially for stock market data, and fitting without using the 2005 data, so we can say
+# the quatratic for assumed by QDA may capture the true relationship more acurately than the linear forms of logistic regression and LDA.
+
+
+# K-NEAREST NEIGHBOURS
+
+# We use the knn() function part of the class library
+# This function forms prediction using a single command with 4 inputs:
+# 1 - a matrix containing the predictors associated with the training data, labeled train.X below
+# 2 - a matrix containing the predictors associated with the data for which we wish to make predictions, labeled test.x below
+# 3 - a vector containing the class labels for the training observations, labeled train.Direction below
+# 4 - a value for k, the number of nearest neighbours to be used by the classifier
+
+# We use cbind() function (column bind) to bind Lag1 and Lag2 into two matrices, one for the training set and the other for the test set
+library(class)
+train.X=cbind(Lag1, Lag2)[train,]
+test.X=cbind(Lag1, Lag2)[!train,]
+train.Direction=Direction[train]
+
+# Now the knn() function can be used
+# We set a random seed before because if several observations are tied as nearest neighbours, then R will randomly break the tie,
+# Therefore a seed must be set in order to ensure reproducibility of results
+set.seed(1)
+knn.pred=knn(train.X, test.X, train.Direction, k=1)
+table(knn.pred, Direction.2005)
+(83+43)/252
+# 0.5 Only 50% of observations are correctly predicted, it may be because k=1 is to flexible, we try with k=3
+knn.pred=knn(train.X, test.X, train.Direction, k=3)
+table(knn.pred, Direction.2005)
+mean(knn.pred==Direction.2005)
+# 0.536 We get a slight improvement
+
+# CONCLUSION: It seems that QDA has the best results so far
+
+
+
+
+
+
+
+
+
+
+
+
+
